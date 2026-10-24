@@ -1,0 +1,16 @@
+{
+  "name": "solana-memecoin-bot-v8-paper",
+  "version": "8.0.0",
+  "private": true,
+  "description": "24/7 server-hosted Solana memecoin paper-trading prototype; no live trading",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}

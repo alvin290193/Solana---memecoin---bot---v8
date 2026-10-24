@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Solana Memecoin Bot V8 — Paper</title>
+<style>
+:root{font-family:system-ui,Arial,sans-serif;color:#eef2ff;background:#0b1020}*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(160deg,#111a31,#080b14 65%);min-height:100vh}
+header,main{max-width:1000px;margin:auto;padding:18px 14px}h1{font-size:22px;margin:0 0 6px}
+.small{font-size:12px;color:#aab5d3;line-height:1.5}.notice,.card{border-radius:13px;padding:13px;margin:10px 0}
+.notice{border:1px solid #705d2d;background:#2b2414;color:#ffe6a1;font-size:13px;line-height:1.5}
+.card{background:#151d32;border:1px solid #273452;min-width:0}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.label{font-size:12px;color:#9eaccb}.value{font-size:21px;font-weight:750;overflow-wrap:anywhere}
+button{background:#7c6cff;border:0;border-radius:9px;padding:11px 13px;color:white;font-weight:700;margin:3px 4px 3px 0}
+button.secondary{background:#273452}.good{color:#6fe0b0}.bad{color:#ff9eaa}
+.section{font-size:17px;margin:22px 0 8px}.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:600px;font-size:12px}td,th{text-align:left;padding:9px;border-bottom:1px solid #273452}th{color:#aab5d3}
+.position{display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}
+@media(min-width:650px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+</style>
+</head><body>
+<header><h1>🛰️ Solana Memecoin Bot V8</h1><div class="small">Dashboard cloud • otomatisasi PAPER trading • tidak melakukan transaksi live</div></header>
+<main>
+<div class="notice"><b>MODE SIMULASI SAJA.</b> Bot server dapat berjalan ketika HP mati, tetapi pembelian dan penjualan di sini hanya virtual. Belum ada integrasi transaksi sungguhan atau pemeriksaan rug-pull menyeluruh. Jangan masukkan seed phrase/private key.</div>
+<div class="grid">
+<div class="card"><div class="label">Saldo simulasi</div><div id="cash" class="value">$100.00</div></div>
+<div class="card"><div class="label">Nilai posisi terbuka</div><div id="openValue" class="value">$0.00</div></div>
+<div class="card"><div class="label">Ekuitas simulasi</div><div id="equity" class="value">$100.00</div></div>
+<div class="card"><div class="label">P/L terealisasi</div><div id="realized" class="value">$0.00</div></div>
+<div class="card"><div class="label">P/L belum terealisasi</div><div id="unrealized" class="value">$0.00</div></div>
+<div class="card"><div class="label">Status server</div><div id="status" class="small">Memuat status…</div><div id="lastScan" class="small"></div></div>
+</div>
+<div class="card"><b>Kontrol</b><br><button onclick="scan()">Pindai sekarang</button><button class="secondary" onclick="resetPaper()">Reset simulasi</button><div id="settings" class="small"></div></div>
+<h2 class="section">Posisi simulasi terbuka</h2><div id="positions" class="card small">Belum ada posisi.</div>
+<h2 class="section">Token hasil pemindaian</h2><div class="tablewrap"><table><thead><tr><th>Token</th><th>Harga USD</th><th>Perubahan 1 jam</th><th>Likuiditas</th><th>Volume 24 jam</th></tr></thead><tbody id="tokens"><tr><td colspan="5">Memuat…</td></tr></tbody></table></div>
+<h2 class="section">Riwayat simulasi</h2><div class="tablewrap"><table><thead><tr><th>Waktu</th><th>Token</th><th>Aksi</th><th>Harga</th><th>Jumlah</th><th>Hasil</th></tr></thead><tbody id="history"></tbody></table></div>
+</main>
+<script>
+const $=id=>document.getElementById(id), usd=n=>'$'+Number(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:4});
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function load(){try{const r=await fetch('/api/status',{cache:'no-store'});const d=await r.json();
+$('cash').textContent=usd(d.cash);$('openValue').textContent=usd(d.openValue);$('equity').textContent=usd(d.equity);
+$('realized').textContent=usd(d.realized);$('unrealized').textContent=usd(d.unrealized);
+$('realized').className='value '+(d.realized>=0?'good':'bad');$('unrealized').className='value '+(d.unrealized>=0?'good':'bad');
+$('status').textContent=d.status;$('lastScan').textContent='Pemindaian terakhir: '+(d.lastScanAt?new Date(d.lastScanAt).toLocaleString():'belum ada');
+$('settings').textContent=`Paper mode • posisi $${d.settings.positionSize} • TP ${d.settings.takeProfit}% • SL ${d.settings.stopLoss}% • max ${d.settings.maxOpenPositions} posisi • scan ${d.settings.scanSeconds} detik`;
+$('positions').innerHTML=d.positions.length?d.positions.map(p=>`<div class="position"><div><b>${esc(p.tokenName)}</b><div class="small">Masuk ${usd(p.entry)} • Sekarang ${usd(p.price)} • ${((p.price/p.entry-1)*100).toFixed(2)}%</div></div><b class="${p.price>=p.entry?'good':'bad'}">${usd((p.price-p.entry)*p.qty)}</b></div>`).join('<hr>'):'Belum ada posisi.';
+$('tokens').innerHTML=d.tokens.length?d.tokens.map(p=>`<tr><td><b>${esc(p.baseToken?.symbol||p.baseToken?.name||'TOKEN')}</b><br><span class="small">${esc(p.baseToken?.name||'')}</span></td><td>${usd(p.priceUsd)}</td><td class="${Number(p.priceChange?.h1||0)>=0?'good':'bad'}">${Number(p.priceChange?.h1||0).toFixed(2)}%</td><td>${usd(p.liquidity?.usd)}</td><td>${usd(p.volume?.h24)}</td></tr>`).join(''):'<tr><td colspan="5">Belum ada data token.</td></tr>';
+$('history').innerHTML=d.history.length?d.history.map(h=>`<tr><td>${esc(new Date(h.time).toLocaleString())}</td><td>${esc(h.token)}</td><td>${esc(h.action)}</td><td>${usd(h.price)}</td><td>${usd(h.amount)}</td><td>${esc(h.result)}</td></tr>`).join(''):'<tr><td colspan="6">Belum ada transaksi.</td></tr>';
+}catch(e){$('status').textContent='Tidak bisa terhubung ke backend: '+e.message;}}
+async function scan(){ $('status').textContent='Memindai…';try{await fetch('/api/scan',{method:'POST'});await load()}catch(e){$('status').textContent='Pemindaian gagal: '+e.message}}
+async function resetPaper(){if(!confirm('Reset seluruh saldo, posisi, dan riwayat SIMULASI?'))return;await fetch('/api/reset',{method:'POST'});await load()}
+load();setInterval(load,10000);
+</script></body></html>
